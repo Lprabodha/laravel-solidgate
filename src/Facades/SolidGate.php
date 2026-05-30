@@ -10,6 +10,7 @@ use Lahiru\LaravelSolidGate\Responses\SolidGateResponse;
  * SolidGate Facade
  *
  * @method static SolidGateResponse charge(array $attributes)
+ * @method static SolidGateResponse auth(array $attributes)
  * @method static SolidGateResponse recurring(array $attributes)
  * @method static SolidGateResponse status(array $attributes)
  * @method static SolidGateResponse refund(array $attributes)

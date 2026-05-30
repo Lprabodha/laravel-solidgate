@@ -18,6 +18,14 @@ interface SolidGateClientInterface
     public function charge(array $attributes): SolidGateResponse;
 
     /**
+     * Authorize a card without capturing funds.
+     *
+     * @param  array  $attributes
+     * @return SolidGateResponse
+     */
+    public function auth(array $attributes): SolidGateResponse;
+
+    /**
      * Create a recurring transaction.
      *
      * @param  array  $attributes

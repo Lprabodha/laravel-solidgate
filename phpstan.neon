@@ -1,0 +1,8 @@
+includes:
+    - vendor/orchestra/testbench-core/phpstan.neon.dist
+
+parameters:
+    level: 5
+    paths:
+        - src
+    checkMissingIterableValueType: false

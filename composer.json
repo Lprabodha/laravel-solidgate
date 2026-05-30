@@ -67,7 +67,7 @@
   },
   "scripts": {
     "test": "phpunit",
-    "analyse": "phpstan analyse",
+    "analyse": "vendor/bin/phpstan analyse",
     "format": "pint"
   }
 }

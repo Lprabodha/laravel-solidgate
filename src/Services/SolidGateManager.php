@@ -2,6 +2,7 @@
 
 namespace Lahiru\LaravelSolidGate\Services;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -11,6 +12,8 @@ use Lahiru\LaravelSolidGate\Exceptions\SolidGateApiException;
 use Lahiru\LaravelSolidGate\Exceptions\SolidGateConfigurationException;
 use Lahiru\LaravelSolidGate\Responses\SolidGateResponse;
 use Lahiru\LaravelSolidGate\Support\ErrorMessageFormatter;
+use Lahiru\LaravelSolidGate\Support\PaymentType;
+use Lahiru\LaravelSolidGate\Support\Platform;
 use Lahiru\LaravelSolidGate\Support\SignatureValidator;
 
 /**
@@ -51,7 +54,7 @@ class SolidGateManager implements SolidGateClientInterface
      */
     protected function getConfigValue(string $key, string $envKey): string
     {
-        $value = $this->config[$key] ?? config("solidgate.{$key}") ?? env($envKey);
+        $value = $this->config[$key] ?? config("solidgate.{$key}");
 
         if (empty($value)) {
             throw new SolidGateConfigurationException(
@@ -91,7 +94,19 @@ class SolidGateManager implements SolidGateClientInterface
      */
     public function charge(array $attributes): SolidGateResponse
     {
-        return $this->send('charge', $attributes);
+        return $this->send('charge', $this->mergePaymentDefaults($attributes));
+    }
+
+    /**
+     * Authorize a card without capturing funds.
+     *
+     * @param  array  $attributes
+     * @return SolidGateResponse
+     * @throws SolidGateApiException
+     */
+    public function auth(array $attributes): SolidGateResponse
+    {
+        return $this->send('auth', $this->mergePaymentDefaults($attributes));
     }
 
     /**
@@ -103,7 +118,7 @@ class SolidGateManager implements SolidGateClientInterface
      */
     public function recurring(array $attributes): SolidGateResponse
     {
-        return $this->send('recurring', $attributes);
+        return $this->send('recurring', $this->mergePaymentDefaults($attributes));
     }
 
     /**
@@ -223,6 +238,49 @@ class SolidGateManager implements SolidGateClientInterface
     }
 
     /**
+     * Merge default payment fields required by the SolidGate API.
+     *
+     * @param  array  $attributes
+     * @return array
+     */
+    protected function mergePaymentDefaults(array $attributes): array
+    {
+        if (! array_key_exists('platform', $attributes) || $attributes['platform'] === '') {
+            $defaultPlatform = $this->config['default_platform']
+                ?? config('solidgate.default_platform')
+                ?? Platform::WEB;
+
+            if ($defaultPlatform !== '') {
+                $attributes['platform'] = $defaultPlatform;
+            }
+        }
+
+        if (
+            ! array_key_exists('payment_type', $attributes)
+            && isset($attributes['card_cvv'])
+            && ! isset($attributes['recurring_token'])
+        ) {
+            $defaultPaymentType = $this->config['default_payment_type']
+                ?? config('solidgate.default_payment_type')
+                ?? PaymentType::ONE_CLICK;
+
+            if ($defaultPaymentType !== '') {
+                $attributes['payment_type'] = $defaultPaymentType;
+            }
+        }
+
+        if (isset($attributes['card_exp_month'])) {
+            $attributes['card_exp_month'] = str_pad((string) $attributes['card_exp_month'], 2, '0', STR_PAD_LEFT);
+        }
+
+        if (isset($attributes['card_exp_year'])) {
+            $attributes['card_exp_year'] = (int) $attributes['card_exp_year'];
+        }
+
+        return $attributes;
+    }
+
+    /**
      * Resolve whether a request carries a JSON body and what to sign.
      *
      * @return array{0: string|null, 1: string}
@@ -317,6 +375,13 @@ class SolidGateManager implements SolidGateClientInterface
                 $e->response?->status() ?? 0,
                 $e
             );
+        } catch (ConnectionException $e) {
+            throw new SolidGateApiException(
+                'SolidGate connection failed: ' . $e->getMessage(),
+                ['error' => $e->getMessage()],
+                0,
+                $e
+            );
         }
     }
 
@@ -347,6 +412,12 @@ class SolidGateManager implements SolidGateClientInterface
     public function gate(string $endpoint, array $attributes = [], string $method = 'POST'): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['gate_url'] ?? 'https://gate.solidgate.com/api/', '/');
+        $httpMethod = strtoupper($method);
+
+        if (in_array($httpMethod, ['POST', 'PUT', 'PATCH'], true)) {
+            $attributes = $this->mergePaymentDefaults($attributes);
+        }
+
         return $this->sendToUrl($baseUrl, $endpoint, $attributes, $method);
     }
 
@@ -587,6 +658,8 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Process partial refund.
      *
+     * SolidGate uses the same refund endpoint; partial refunds are determined by amount.
+     *
      * @param  string  $orderId
      * @param  int  $amount
      * @param  string  $method
@@ -674,7 +747,7 @@ class SolidGateManager implements SolidGateClientInterface
      */
     public function chargeWithGooglePay(array $attributes): SolidGateResponse
     {
-        return $this->send('google-pay', $attributes);
+        return $this->send('google-pay', $this->mergePaymentDefaults($attributes));
     }
 
     /**
@@ -686,7 +759,7 @@ class SolidGateManager implements SolidGateClientInterface
      */
     public function chargeWithApplePay(array $attributes): SolidGateResponse
     {
-        return $this->send('apple-pay', $attributes);
+        return $this->send('apple-pay', $this->mergePaymentDefaults($attributes));
     }
 
     /**
@@ -698,7 +771,7 @@ class SolidGateManager implements SolidGateClientInterface
      */
     public function createIncrementalAuth(array $attributes): SolidGateResponse
     {
-        return $this->send('increment', $attributes);
+        return $this->send('increment', $this->mergePaymentDefaults($attributes));
     }
 
     /**
@@ -710,7 +783,7 @@ class SolidGateManager implements SolidGateClientInterface
      */
     public function resignTransaction(array $attributes): SolidGateResponse
     {
-        return $this->send('resign', $attributes);
+        return $this->send('resign', $this->mergePaymentDefaults($attributes));
     }
 
     /**

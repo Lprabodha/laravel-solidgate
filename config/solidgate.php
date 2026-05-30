@@ -61,4 +61,28 @@ return [
     */
 
     'log_requests' => env('SOLIDGATE_LOG_REQUESTS', false),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Payment Platform
+    |--------------------------------------------------------------------------
+    |
+    | Applied to card payment requests (charge, recurring, resign, etc.) when
+    | "platform" is not provided. Valid values: WEB, MOB, APP.
+    |
+    */
+
+    'default_platform' => env('SOLIDGATE_DEFAULT_PLATFORM', 'WEB'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Payment Type
+    |--------------------------------------------------------------------------
+    |
+    | Applied to first card charges when card_cvv is present and payment_type
+    | is omitted. Use PaymentType constants (e.g. 1-click for CIT).
+    |
+    */
+
+    'default_payment_type' => env('SOLIDGATE_DEFAULT_PAYMENT_TYPE', '1-click'),
 ];

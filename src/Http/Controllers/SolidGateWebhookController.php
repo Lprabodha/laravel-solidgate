@@ -15,65 +15,34 @@ class SolidGateWebhookController extends Controller
 {
     /**
      * Handle incoming webhook requests.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\JsonResponse
      */
     public function handle(Request $request): JsonResponse
     {
-        $payload = $request->all();
-        $eventType = $payload['event'] ?? $payload['type'] ?? 'unknown';
+        $payload = json_decode($request->getContent(), true) ?? [];
+        $eventType = $this->resolveEventType($request, $payload);
 
         Log::info('SolidGate webhook received', [
             'event' => $eventType,
+            'event_id' => $request->header('solidgate-event-id'),
             'payload' => $payload,
         ]);
 
-        // Dispatch Laravel event for webhook handling
         event(new SolidGateWebhookReceived($eventType, $payload));
-
-        // You can add custom webhook handling logic here
-        // For example:
-        // match ($eventType) {
-        //     'charge.success' => $this->handleChargeSuccess($payload),
-        //     'charge.failed' => $this->handleChargeFailed($payload),
-        //     'refund.success' => $this->handleRefundSuccess($payload),
-        //     default => null,
-        // };
 
         return response()->json(['status' => 'ok']);
     }
 
     /**
-     * Handle charge success event.
+     * Resolve the SolidGate webhook event type from request headers or payload.
      *
-     * @param  array  $payload
-     * @return void
+     * @param  array<string, mixed>  $payload
      */
-    protected function handleChargeSuccess(array $payload): void
+    protected function resolveEventType(Request $request, array $payload): string
     {
-        // Implement your charge success logic here
-    }
-
-    /**
-     * Handle charge failed event.
-     *
-     * @param  array  $payload
-     * @return void
-     */
-    protected function handleChargeFailed(array $payload): void
-    {
-        // Implement your charge failed logic here
-    }
-
-    /**
-     * Handle refund success event.
-     *
-     * @param  array  $payload
-     * @return void
-     */
-    protected function handleRefundSuccess(array $payload): void
-    {
-        // Implement your refund success logic here
+        return $request->header('solidgate-event-type')
+            ?? $request->header('Solidgate-Event-Type')
+            ?? $payload['event']
+            ?? $payload['type']
+            ?? 'unknown';
     }
 }
