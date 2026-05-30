@@ -2,7 +2,7 @@
 
 [![Latest Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://packagist.org/packages/lahiru/laravel-solidgate)
 [![PHP Version](https://img.shields.io/badge/php-8.2%2B-blue.svg)](https://php.net)
-[![Laravel Version](https://img.shields.io/badge/laravel-10.x%20%7C%2011.x%20%7C%2012.x-red.svg)](https://laravel.com)
+[![Laravel Version](https://img.shields.io/badge/laravel-10.x%20%7C%2011.x%20%7C%2012.x%20%7C%2013.x-red.svg)](https://laravel.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 Laravel package for the [SolidGate](https://docs.solidgate.com/) payment gateway. Use the **facade** or **dependency injection**, get **typed responses**, and call **74+ API endpoints** with correct HMAC-SHA512 signing and sensible defaults.
@@ -67,7 +67,7 @@ Laravel package for the [SolidGate](https://docs.solidgate.com/) payment gateway
 ## Requirements
 
 - PHP 8.2+
-- Laravel 10.x, 11.x, or 12.x
+- Laravel 10.x, 11.x, 12.x, or 13.x (Laravel 13 requires PHP 8.3+)
 
 ---
 
@@ -961,7 +961,7 @@ CI runs on every push and pull request via [GitHub Actions](.github/workflows/ci
 
 | Job | Checks |
 |-----|--------|
-| **tests** | PHPUnit on PHP 8.2 and 8.3 |
+| **tests** | PHPUnit on PHP 8.2 (Laravel 12) and PHP 8.3 (Laravel 13) |
 | **static-analysis** | PHPStan level 5 |
 | **code-style** | Laravel Pint |
 | **security** | Composer audit (advisory) |

@@ -2,6 +2,11 @@
 
 All notable changes to this package will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- Laravel 13 support (`illuminate/*` ^13.0, `orchestra/testbench` ^11.0 for package development)
+
 ## [1.0.2] - 2026-05-30
 
 ### Fixed
