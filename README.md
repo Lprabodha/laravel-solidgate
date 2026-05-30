@@ -5,22 +5,40 @@
 [![Laravel Version](https://img.shields.io/badge/laravel-10.x%20%7C%2011.x%20%7C%2012.x-red.svg)](https://laravel.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A Laravel SDK for the [SolidGate payment gateway](https://api-docs.solidgate.com/). Process card and alternative payments, manage subscriptions, handle webhooks, and pull reports — with official HMAC-SHA512 signing, typed responses, smart defaults (`platform`, `payment_type`), and 74+ API endpoints aligned to the [SolidGate documentation](https://docs.solidgate.com/payments/integrate/access-to-api/).
+Laravel package for the [SolidGate](https://docs.solidgate.com/) payment gateway. Use the **facade** or **dependency injection**, get **typed responses**, and call **74+ API endpoints** with correct HMAC-SHA512 signing and sensible defaults.
+
+**Good for:** server-side card/APM charges, subscriptions, hosted checkout, embedded payment forms, webhooks, and reporting.
 
 ---
 
 ## Table of Contents
 
+**Getting started**
+
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Configuration](#configuration)
+- [Choose your integration](#choose-your-integration)
+- [Using the package in Laravel](#using-the-package-in-laravel)
 - [Quick Start](#quick-start)
+
+**Checkout (customer-facing)**
+
+- [Checkout integrations](#checkout-integrations)
+  - [Payment Page (hosted)](#payment-page-hosted)
+  - [Payment Form (embedded)](#payment-form-embedded)
+
+**Server-side API**
+
 - [Card Payments](#card-payments)
 - [Alternative Payments (APM)](#alternative-payments-apm)
 - [Subscriptions](#subscriptions)
 - [Products, Taxes & Reporting](#products-taxes--reporting)
 - [Webhooks](#webhooks)
+
+**Reference**
+
 - [Responses & Error Handling](#responses--error-handling)
 - [Helper Classes](#helper-classes)
 - [Troubleshooting](#troubleshooting)
@@ -36,6 +54,7 @@ A Laravel SDK for the [SolidGate payment gateway](https://api-docs.solidgate.com
 | Feature | Description |
 |---------|-------------|
 | **74+ endpoints** | Card, APM, subscriptions, taxes, checkout, webhooks, reporting |
+| **Checkout docs** | [Payment Page](#payment-page-hosted) and [Payment Form](#payment-form-embedded) with copy-paste Laravel examples |
 | **Correct signing** | HMAC-SHA512 over exact JSON body — matches official PHP SDK |
 | **Smart defaults** | Auto-fills `platform`, `payment_type`, and card expiry formatting |
 | **Type-safe responses** | `SolidGateResponse` with dot-notation and error helpers |
@@ -113,9 +132,74 @@ SOLIDGATE_WEBHOOK_MIDDLEWARE=solidgate.webhook
 
 > **Tip:** Each API group uses a different base URL. Card payments go to `pay.solidgate.com`, subscriptions to `subscriptions.solidgate.com`, APM to `gate.solidgate.com`, and reports to `reports.solidgate.com`. The package routes these automatically — you only call the facade methods.
 
+### Config file (`config/solidgate.php`)
+
+After publishing, keys are read from `config('solidgate.public_key')` and `config('solidgate.secret_key')` (backed by `SOLIDGATE_*` env vars).
+
+---
+
+## Choose your integration
+
+Pick the flow that matches your product. All options below use this package on the server; only Payment Form also needs frontend JS.
+
+| Integration | Customer experience | Package methods | Best when |
+|-------------|---------------------|-----------------|-----------|
+| **[Payment Page](#payment-page-hosted)** | Redirect to Solidgate-hosted page | `createPaymentPage()`, `deactivatePaymentPage()` | Fastest setup, minimal frontend |
+| **[Payment Form](#payment-form-embedded)** | Card fields on your site | `generateSignature()` + app helper for `merchantData` | Full UI control, no redirect |
+| **Card API (`charge`)** | You collect PAN (PCI scope) | `charge()`, `auth()`, `recurring()` | Full backend control |
+| **APM** | PayPal, Pix, etc. | `initializeAlternativePayment()` | Alternative payment methods |
+| **Subscriptions** | Recurring billing | `retrieveSubscription()`, `cancelSubscription()`, … | SaaS / memberships |
+
+```mermaid
+flowchart LR
+  subgraph hosted [Hosted checkout]
+    A[Your Laravel app] -->|createPaymentPage| B[Solidgate page URL]
+    B --> C[Customer pays]
+    C --> D[success_url / fail_url]
+  end
+  subgraph embedded [Embedded checkout]
+    E[Your Laravel app] -->|merchantData| F[Your Blade page]
+    F -->|solid-form.js| G[Customer pays on-site]
+  end
+```
+
+---
+
+## Using the package in Laravel
+
+### Facade (typical)
+
+```php
+use Lahiru\LaravelSolidGate\Facades\SolidGate;
+
+$response = SolidGate::charge([...]);
+```
+
+### Dependency injection (testable)
+
+```php
+use Lahiru\LaravelSolidGate\Contracts\SolidGateClientInterface;
+
+public function __construct(
+    protected SolidGateClientInterface $solidgate
+) {}
+
+$this->solidgate->charge([...]);
+```
+
+### Signing helper (Payment Form)
+
+```php
+$signature = SolidGate::generateSignature($jsonPayload);
+```
+
+Uses the same HMAC-SHA512 algorithm as outbound API requests and webhook verification.
+
 ---
 
 ## Quick Start
+
+Three-minute path to a successful server-side charge. For hosted or embedded checkout, jump to [Checkout integrations](#checkout-integrations).
 
 ### 1. Make your first charge
 
@@ -212,7 +296,241 @@ $response = SolidGate::recurring([
 
 ---
 
+## Checkout integrations
+
+Customer-facing checkout using Solidgate UI. For server-side card capture without Solidgate JS, see [Card Payments](#card-payments).
+
+| | Payment Page | Payment Form |
+|---|--------------|--------------|
+| **Docs** | [Payment Page](https://docs.solidgate.com/payments/integrate/payment-page/) | [Payment Form](https://docs.solidgate.com/payments/integrate/payment-form/) |
+| **UX** | Redirect to hosted URL | Embedded on your page |
+| **Frontend** | None required | `solid-form.js` + `PaymentFormSdk.init()` |
+| **Backend** | `createPaymentPage()` | `generateSignature()` + encrypt `paymentIntent` |
+| **PCI** | Card data on Solidgate | Card data tokenized by Solidgate iframe |
+
+---
+
+### Payment Page (hosted)
+
+**When to use:** you want checkout live quickly with almost no frontend work.
+
+**Flow**
+
+1. Laravel calls `SolidGate::createPaymentPage(['order' => [...], 'page_customization' => [...]])`.
+2. API returns a `url` (expires in ~24 hours).
+3. Redirect the customer with `redirect()->away($url)`.
+4. After payment, Solidgate sends the user to your `success_url` or `fail_url`.
+
+**API**
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `createPaymentPage($attributes)` | `POST /init` | Create hosted page, get URL |
+| `deactivatePaymentPage($pageId)` | `POST /deactivate` | Invalidate page before expiry |
+
+**Minimal example**
+
+```php
+use Illuminate\Support\Str;
+use Lahiru\LaravelSolidGate\Facades\SolidGate;
+use Lahiru\LaravelSolidGate\Support\Platform;
+
+$response = SolidGate::createPaymentPage([
+    'order' => [
+        'order_id'          => (string) Str::uuid(),
+        'amount'            => 10000,
+        'currency'          => 'USD',
+        'order_description' => 'Premium package',
+        'customer_email'    => $request->user()->email,
+        'ip_address'        => $request->ip(),
+        'platform'          => Platform::WEB,
+        'success_url'       => route('checkout.success'),
+        'fail_url'          => route('checkout.fail'),
+    ],
+]);
+
+if (! $response->isSuccessful()) {
+    return back()->withErrors(['payment' => $response->getErrorMessage()]);
+}
+
+return redirect()->away($response->get('url'));
+```
+
+**Controller + route**
+
+```php
+// app/Http/Controllers/PaymentPageController.php
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Lahiru\LaravelSolidGate\Facades\SolidGate;
+use Lahiru\LaravelSolidGate\Support\Platform;
+
+class PaymentPageController extends Controller
+{
+    public function checkout(Request $request)
+    {
+        $response = SolidGate::createPaymentPage([
+            'order' => [
+                'order_id'          => (string) Str::uuid(),
+                'amount'            => $request->integer('amount'),
+                'currency'          => $request->string('currency'),
+                'order_description' => $request->string('description'),
+                'customer_email'    => $request->user()->email,
+                'ip_address'        => $request->ip(),
+                'platform'          => Platform::WEB,
+                'success_url'       => route('checkout.success'),
+                'fail_url'          => route('checkout.fail'),
+            ],
+        ]);
+
+        if (! $response->isSuccessful()) {
+            return back()->withErrors(['payment' => $response->getErrorMessage()]);
+        }
+
+        return redirect()->away($response->get('url'));
+    }
+}
+```
+
+```php
+// routes/web.php
+Route::get('/checkout', [PaymentPageController::class, 'checkout'])->name('checkout.start');
+```
+
+**Subscriptions / catalog:** use `product_price_id` in `order` (from `SolidGate::getProductPrices()`). See [Create your payment page](https://docs.solidgate.com/payments/integrate/payment-page/create-your-payment-page/).
+
+**Checklist**
+
+- [ ] Unique `order_id` per checkout attempt
+- [ ] Public `ip_address` (not `127.0.0.1` in production)
+- [ ] `success_url` and `fail_url` registered and reachable
+- [ ] Store `id` from response if you need `deactivatePaymentPage()` later
+
+---
+
+### Payment Form (embedded)
+
+**When to use:** checkout must match your site design and stay on the same URL.
+
+**Flow**
+
+1. Build a `paymentIntent` array (amount, currency, `order_id`, customer, URLs, etc.).
+2. Server returns `merchantData`: `merchant`, `signature`, `paymentIntent` (encrypted).
+3. Blade loads `https://cdn.solidgate.com/js/solid-form.js` and calls `PaymentFormSdk.init({ merchantData })`.
+
+**`merchantData` shape (passed to JS)**
+
+| Key | Source |
+|-----|--------|
+| `merchant` | `config('solidgate.public_key')` |
+| `signature` | `SolidGate::generateSignature($json)` |
+| `paymentIntent` | AES-256-CBC encrypted JSON (see helper below) |
+
+**App helper** — copy to `app/Services/SolidgatePaymentForm.php` (no extra Composer package):
+
+```php
+<?php
+
+namespace App\Services;
+
+use Lahiru\LaravelSolidGate\Facades\SolidGate;
+
+class SolidgatePaymentForm
+{
+    public function merchantData(array $paymentIntent): array
+    {
+        $json = json_encode($paymentIntent, JSON_UNESCAPED_SLASHES);
+
+        return [
+            'merchant'      => config('solidgate.public_key'),
+            'signature'     => SolidGate::generateSignature($json),
+            'paymentIntent' => $this->encrypt($paymentIntent, config('solidgate.secret_key')),
+        ];
+    }
+
+    private function encrypt(array $paymentIntent, string $secretKey): string
+    {
+        $payload = json_encode($paymentIntent, JSON_UNESCAPED_SLASHES);
+        $key = substr($secretKey, 0, 32);
+        $ivLen = openssl_cipher_iv_length('aes-256-cbc');
+        $iv = openssl_random_pseudo_bytes($ivLen);
+        $encrypted = openssl_encrypt($payload, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+
+        return str_replace(['+', '/'], ['-', '_'], base64_encode($iv.$encrypted));
+    }
+}
+```
+
+Encryption matches [Solidgate’s without-SDK PHP guide](https://docs.solidgate.com/payments/integrate/payment-form/create-your-payment-form/).
+
+**Controller**
+
+```php
+namespace App\Http\Controllers;
+
+use App\Services\SolidgatePaymentForm;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Lahiru\LaravelSolidGate\Support\Platform;
+
+class PaymentFormController extends Controller
+{
+    public function __construct(protected SolidgatePaymentForm $paymentForm) {}
+
+    public function checkout(Request $request)
+    {
+        $paymentIntent = [
+            'order_id'          => (string) Str::uuid(),
+            'amount'            => 10000,
+            'currency'          => 'USD',
+            'order_description' => 'Premium package',
+            'customer_email'    => $request->user()->email,
+            'ip_address'        => $request->ip(),
+            'platform'          => Platform::WEB,
+            'success_url'       => route('checkout.success'),
+            'fail_url'          => route('checkout.fail'),
+        ];
+
+        return view('checkout.payment-form', [
+            'merchantData' => $this->paymentForm->merchantData($paymentIntent),
+        ]);
+    }
+}
+```
+
+Field reference: [paymentIntent object](https://docs.solidgate.com/payments/integrate/payment-form/create-your-payment-form/).
+
+**Blade**
+
+```html
+<div id="solid-payment-form-container"></div>
+
+<script src="https://cdn.solidgate.com/js/solid-form.js"></script>
+<script>
+  PaymentFormSdk.init({
+    merchantData: @json($merchantData),
+    formParams: { formTypeClass: 'default' },
+  });
+</script>
+```
+
+**Checklist**
+
+- [ ] Never expose `SOLIDGATE_SECRET_KEY` to the browser
+- [ ] New `order_id` on every payment attempt
+- [ ] Public `ip_address`
+- [ ] Load `solid-form.js` only once (duplicate script causes init warnings)
+- [ ] Dynamic amount/plan changes: [update payment form](https://docs.solidgate.com/payments/integrate/payment-form/update-payment-form/)
+
+> **Optional:** Official [`solidgate/php-sdk`](https://docs.solidgate.com/payments/integrate/payment-form/create-your-payment-form/) exposes `$api->formMerchantData($paymentIntent)` if you prefer not to maintain the encrypt helper.
+
+---
+
 ## Card Payments
+
+Server-side card processing (you send PAN/CVV from your backend). For Solidgate-hosted or embedded UI instead, see [Checkout integrations](#checkout-integrations).
 
 All card endpoints use the **pay API** (`pay.solidgate.com/api/v1/`).
 
@@ -365,12 +683,10 @@ SolidGate::downloadFinancialEntries($reportId);
 SolidGate::getRoutingEventsReport([...]);
 SolidGate::downloadRoutingEvents($reportId);
 
-// Checkout (hosted page & payment link)
-$response = SolidGate::createPaymentPage(['order' => [...], 'page_customization' => [...]]);
-$pageUrl = $response->get('url');
-SolidGate::deactivatePaymentPage($pageId);
+// Payment links (shareable URL, separate from Payment Page)
 SolidGate::createPaymentLink([...]);
 SolidGate::deactivatePaymentLink($linkId);
+// Hosted / embedded checkout: [Checkout integrations](#checkout-integrations)
 
 // Risks & files
 SolidGate::createFraudPreventionListItems(['items' => [...]]);
@@ -381,6 +697,8 @@ SolidGate::createFile(['file_name' => 'document.pdf', 'file_type' => 'applicatio
 ---
 
 ## Webhooks
+
+Receive async events (`card_gate.order.updated`, chargebacks, etc.) on a Laravel route with signature verification.
 
 ### Setup
 
@@ -551,6 +869,15 @@ Official reason codes — see [Refund Reasons](https://docs.solidgate.com/paymen
 
 ## Troubleshooting
 
+### Payment Page or Form fails to load
+
+| Issue | Fix |
+|-------|-----|
+| Form blank / init error | New `order_id`, public `ip_address`, required `paymentIntent` fields |
+| `Invalid IP` on checkout | Use customer public IP in production; see below |
+| Payment Form script warning | Load `solid-form.js` only once |
+| Page URL expired | Links last ~24h; call `createPaymentPage()` again |
+
 ### `Platform is empty or invalid` (error `2.01`)
 
 Add `platform` to your request or rely on the config default:
@@ -618,7 +945,9 @@ Logs URL, method, status, and response to Laravel's log channel at `debug` level
 | Subscriptions | `subscriptions.solidgate.com/api/v1/` | `retrieveSubscription`, `cancelSubscription`, `createProduct` |
 | Taxes | `subscriptions.solidgate.com/api/v1/` | `createTransactionalTax`, `downloadTransactionalTax` |
 | Reporting | `reports.solidgate.com/` | `getCardOrdersReport`, `getRoutingEventsReport` |
-| Checkout | `pay.solidgate.com/api/v1/` | `createPaymentPage`, `createPaymentLink` |
+| Checkout (hosted page) | `pay.solidgate.com/api/v1/` | `createPaymentPage`, `deactivatePaymentPage` |
+| Checkout (payment link) | `pay.solidgate.com/api/v1/` | `createPaymentLink`, `deactivatePaymentLink` |
+| Payment Form signing | — (local) | `generateSignature()` + app encrypt helper — see [Payment Form](#payment-form-embedded) |
 | Webhooks | `pay.solidgate.com/api/v1/` | `createWebhookEndpoint`, `listWebhookEndpoints` |
 
 Full API spec: [api-docs.solidgate.com](https://api-docs.solidgate.com/)
@@ -671,5 +1000,7 @@ MIT — see [LICENSE](LICENSE).
 | API Reference | [api-docs.solidgate.com](https://api-docs.solidgate.com/) |
 | Access & Signing | [docs.solidgate.com/payments/integrate/access-to-api](https://docs.solidgate.com/payments/integrate/access-to-api/) |
 | Payment Guide | [docs.solidgate.com](https://docs.solidgate.com/) |
+| Payment Page | [docs.solidgate.com/payments/integrate/payment-page](https://docs.solidgate.com/payments/integrate/payment-page/) |
+| Payment Form | [docs.solidgate.com/payments/integrate/payment-form](https://docs.solidgate.com/payments/integrate/payment-form/) |
 | Refund Reasons | [docs.solidgate.com/payments/payments-insights/refund-reasons](https://docs.solidgate.com/payments/payments-insights/refund-reasons/) |
 | Cancel Codes | [docs.solidgate.com/billing/subscription-overview/subscription-insights/subscription-cancel-codes](https://docs.solidgate.com/billing/subscription-overview/subscription-insights/subscription-cancel-codes/) |
