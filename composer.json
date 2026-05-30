@@ -1,6 +1,6 @@
 {
   "name": "lahiru/laravel-solidgate",
-  "description": "Complete Laravel wrapper for SolidGate payment gateway API with 74+ endpoints, modern PHP 8.2+ features, and comprehensive error handling",
+  "description": "Laravel SDK for SolidGate — card & APM payments, subscriptions, webhooks, and reporting with official HMAC-SHA512 signing, typed responses, and smart API defaults.",
   "type": "library",
   "license": "MIT",
   "keywords": [

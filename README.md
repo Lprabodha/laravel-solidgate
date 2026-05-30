@@ -5,7 +5,7 @@
 [![Laravel Version](https://img.shields.io/badge/laravel-10.x%20%7C%2011.x%20%7C%2012.x-red.svg)](https://laravel.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-A Laravel package for the [SolidGate payment gateway](https://api-docs.solidgate.com/). It wraps **74+ endpoints** for card payments, alternative payment methods, subscriptions, webhooks, and reporting — with HMAC-SHA512 signing aligned to the [official SolidGate docs](https://docs.solidgate.com/payments/integrate/access-to-api/).
+A Laravel SDK for the [SolidGate payment gateway](https://api-docs.solidgate.com/). Process card and alternative payments, manage subscriptions, handle webhooks, and pull reports — with official HMAC-SHA512 signing, typed responses, smart defaults (`platform`, `payment_type`), and 74+ API endpoints aligned to the [SolidGate documentation](https://docs.solidgate.com/payments/integrate/access-to-api/).
 
 ---
 
