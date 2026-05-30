@@ -150,19 +150,6 @@ Pick the flow that matches your product. All options below use this package on t
 | **APM** | PayPal, Pix, etc. | `initializeAlternativePayment()` | Alternative payment methods |
 | **Subscriptions** | Recurring billing | `retrieveSubscription()`, `cancelSubscription()`, … | SaaS / memberships |
 
-```mermaid
-flowchart LR
-  subgraph hosted [Hosted checkout]
-    A[Your Laravel app] -->|createPaymentPage| B[Solidgate page URL]
-    B --> C[Customer pays]
-    C --> D[success_url / fail_url]
-  end
-  subgraph embedded [Embedded checkout]
-    E[Your Laravel app] -->|merchantData| F[Your Blade page]
-    F -->|solid-form.js| G[Customer pays on-site]
-  end
-```
-
 ---
 
 ## Using the package in Laravel
