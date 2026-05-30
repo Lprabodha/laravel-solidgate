@@ -268,6 +268,7 @@ interface SolidGateClientInterface
 
     // Alternative Payment Methods
     public function initializeAlternativePayment(array $attributes): SolidGateResponse;
+    public function recurringAlternativePayment(array $attributes): SolidGateResponse;
     public function revokeRecurringToken(array $attributes): SolidGateResponse;
 
     // Products and Prices - Additional Endpoints
@@ -321,6 +322,8 @@ interface SolidGateClientInterface
     public function getCardFraudAlertsReport(array $filters): SolidGateResponse;
     public function getFinancialEntriesByDateRange(array $filters): SolidGateResponse;
     public function downloadFinancialEntries(string $reportId): SolidGateResponse;
+    public function getRoutingEventsReport(array $filters): SolidGateResponse;
+    public function downloadRoutingEvents(string $reportId): SolidGateResponse;
 
     // Files
     public function createFile(array $attributes): SolidGateResponse;

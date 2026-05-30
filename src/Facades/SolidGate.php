@@ -43,6 +43,7 @@ use Lahiru\LaravelSolidGate\Responses\SolidGateResponse;
  * @method static SolidGateResponse resignTransaction(array $attributes)
  * @method static SolidGateResponse getArnCodes(array $attributes)
  * @method static SolidGateResponse initializeAlternativePayment(array $attributes)
+ * @method static SolidGateResponse recurringAlternativePayment(array $attributes)
  * @method static SolidGateResponse revokeRecurringToken(array $attributes)
  * @method static SolidGateResponse getProductList(array $filters = [])
  * @method static SolidGateResponse getProduct(string $productId)
@@ -82,6 +83,8 @@ use Lahiru\LaravelSolidGate\Responses\SolidGateResponse;
  * @method static SolidGateResponse getCardFraudAlertsReport(array $filters)
  * @method static SolidGateResponse getFinancialEntriesByDateRange(array $filters)
  * @method static SolidGateResponse downloadFinancialEntries(string $reportId)
+ * @method static SolidGateResponse getRoutingEventsReport(array $filters)
+ * @method static SolidGateResponse downloadRoutingEvents(string $reportId)
  * @method static SolidGateResponse createFile(array $attributes)
  *
  * @see \Lahiru\LaravelSolidGate\Services\SolidGateManager

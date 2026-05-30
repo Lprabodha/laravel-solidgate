@@ -73,16 +73,37 @@ SOLIDGATE_WEBHOOK_MIDDLEWARE=solidgate.webhook
 
 ```php
 use Lahiru\LaravelSolidGate\Facades\SolidGate;
+use Lahiru\LaravelSolidGate\Support\PaymentType;
 
 $response = SolidGate::charge([
     'amount' => 10000,
     'currency' => 'USD',
     'order_id' => 'order-123',
+    'order_description' => 'Premium package',
     'customer_email' => 'customer@example.com',
+    'ip_address' => request()->ip(),
+    'card_number' => '4111111111111111',
+    'card_holder' => 'John Doe',
+    'card_exp_month' => '12',
+    'card_exp_year' => 2030,
+    'card_cvv' => '123',
+]);
+
+// Token-based charge (no card_cvv — requires payment_type + recurring_token)
+$response = SolidGate::recurring([
+    'amount' => 10000,
+    'currency' => 'USD',
+    'order_id' => 'order-456',
+    'customer_email' => 'customer@example.com',
+    'ip_address' => request()->ip(),
+    'payment_type' => PaymentType::RECURRING,
+    'recurring_token' => 'token-from-previous-payment',
 ]);
 
 if ($response->isSuccessful()) {
     $status = $response->get('order.status');
+} else {
+    $error = $response->getErrorMessage();
 }
 ```
 
@@ -137,13 +158,26 @@ SolidGate::getArnCodes(['order_id' => 'order-123']);
 
 ## Alternative Payment Methods
 
+APM endpoints use the **gate API** (`gate.solidgate.com`), not the pay API.
+
 ```php
-// Initiate APM payment (PayPal, Pix, etc.)
+// Initiate APM payment (PayPal, Pix, etc.) — gate.solidgate.com/api/v1/init-payment
 SolidGate::initializeAlternativePayment([
     'payment_method' => 'paypal-vault',
     'order_id' => 'order-123',
     'amount' => 1020,
     'currency' => 'USD',
+    'customer_email' => 'customer@example.com',
+    'order_description' => 'Premium package',
+]);
+
+// Token-based APM recurring — gate.solidgate.com/api/v1/recurring
+SolidGate::recurringAlternativePayment([
+    'order_id' => 'order-123',
+    'amount' => 1020,
+    'currency' => 'USD',
+    'payment_method' => 'paypal-vault',
+    'token' => 'token-from-previous-payment',
 ]);
 
 // APM order status & token revoke
@@ -313,6 +347,8 @@ SolidGate::getFinancialEntriesByDateRange([...]);
 // Download generated reports
 SolidGate::downloadPreventionAlerts($reportId);
 SolidGate::downloadFinancialEntries($reportId);
+SolidGate::getRoutingEventsReport([...]);
+SolidGate::downloadRoutingEvents($reportId);
 ```
 
 ## Risks, Webhooks API & Files
@@ -426,18 +462,24 @@ composer format
 
 ## API Coverage
 
-| Category | Endpoints |
-|----------|-----------|
-| Card payments | charge, google-pay, apple-pay, increment, recurring, resign, refund, void, settle, status, arn-code |
-| Alternative payments | init-payment, v1/recurring, v1/recurring-token/cancel, v1/refund, v1/status |
-| Products & prices | CRUD, calculate, retrieve |
-| Taxes | transactional, summary + download |
-| Subscriptions | Full lifecycle, pause, invoices, orders |
-| Risks | Fraud prevention, dispute representment |
-| Checkout | Payment page & link (init/deactivate) |
-| Webhooks | Endpoint CRUD |
-| Reporting | Card, APM, subscriptions, chargebacks, disputes, alerts, financial entries |
-| Files | get-upload-url |
+All endpoints align with the [official SolidGate API reference](https://api-docs.solidgate.com/).
+
+| Category | Base URL | Endpoints |
+|----------|----------|-----------|
+| Card payments | `pay.solidgate.com/api/v1/` | charge, google-pay, apple-pay, increment, recurring, resign, refund, void, settle, status, arn-code |
+| Alternative payments | `gate.solidgate.com/api/` | v1/init-payment, v1/recurring, v1/recurring-token/cancel, v1/refund, v1/status |
+| Products & prices | `subscriptions.solidgate.com/api/v1/` | CRUD, calculate, retrieve |
+| Taxes | `subscriptions.solidgate.com/api/v1/` | transactional, summary + download |
+| Subscriptions | `subscriptions.solidgate.com/api/v1/` | Full lifecycle, pause, invoices, orders |
+| Risks | `reports.solidgate.com/` | Fraud prevention, dispute representment |
+| Checkout | `pay.solidgate.com/api/v1/` | Payment page & link (init/deactivate) |
+| Webhooks | `pay.solidgate.com/api/v1/` | Endpoint CRUD |
+| Reporting | `reports.solidgate.com/` | Card, APM, subscriptions, chargebacks, disputes, alerts, financial entries, routing events |
+| Files | `pay.solidgate.com/api/v1/` | file/get-upload-url |
+
+### Card charge required fields
+
+Per the API docs, a card charge requires `amount`, `currency`, `order_id`, `order_description`, `customer_email`, `ip_address`, `card_number`, `card_exp_month`, and `card_exp_year`. Provide **either** `card_cvv` (first payment) **or** `payment_type` + token (recurring/1-click). Use `PaymentType` constants for valid `payment_type` values.
 
 ## Changelog
 

@@ -2,6 +2,8 @@
 
 namespace Lahiru\LaravelSolidGate\Responses;
 
+use Lahiru\LaravelSolidGate\Support\ErrorMessageFormatter;
+
 /**
  * Response wrapper for SolidGate API responses.
  */
@@ -16,10 +18,44 @@ readonly class SolidGateResponse
 
     /**
      * Check if the response indicates success.
+     *
+     * SolidGate may return HTTP 200 with an "error" object for validation failures.
      */
     public function isSuccessful(): bool
     {
-        return $this->statusCode >= 200 && $this->statusCode < 300;
+        if ($this->statusCode < 200 || $this->statusCode >= 300) {
+            return false;
+        }
+
+        return ! isset($this->data['error']);
+    }
+
+    /**
+     * Check if the response contains an API-level error.
+     */
+    public function hasError(): bool
+    {
+        return isset($this->data['error']);
+    }
+
+    /**
+     * Get the API error payload, if present.
+     */
+    public function getError(): ?array
+    {
+        return $this->data['error'] ?? null;
+    }
+
+    /**
+     * Get a flattened human-readable API error message.
+     */
+    public function getErrorMessage(): ?string
+    {
+        if (! $this->hasError()) {
+            return null;
+        }
+
+        return ErrorMessageFormatter::fromResponse($this->data);
     }
 
     /**

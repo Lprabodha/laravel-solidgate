@@ -54,16 +54,44 @@ class SolidGateManagerTest extends TestCase
         });
     }
 
-    public function test_initialize_alternative_payment_uses_init_payment_endpoint(): void
+    public function test_initialize_alternative_payment_uses_gate_init_payment_endpoint(): void
     {
         Http::fake([
-            'https://pay.solidgate.com/api/v1/init-payment' => Http::response(['order' => []], 200),
+            'https://gate.solidgate.com/api/v1/init-payment' => Http::response(['order' => []], 200),
         ]);
 
         $manager = new SolidGateManager($this->solidgateConfig());
         $manager->initializeAlternativePayment(['payment_method' => 'paypal-vault', 'order_id' => '123']);
 
-        Http::assertSent(fn ($request) => $request->url() === 'https://pay.solidgate.com/api/v1/init-payment');
+        Http::assertSent(fn ($request) => $request->url() === 'https://gate.solidgate.com/api/v1/init-payment');
+    }
+
+    public function test_recurring_alternative_payment_uses_gate_recurring_endpoint(): void
+    {
+        Http::fake([
+            'https://gate.solidgate.com/api/v1/recurring' => Http::response(['order' => []], 200),
+        ]);
+
+        $manager = new SolidGateManager($this->solidgateConfig());
+        $manager->recurringAlternativePayment(['order_id' => '123', 'amount' => 1000]);
+
+        Http::assertSent(fn ($request) => $request->url() === 'https://gate.solidgate.com/api/v1/recurring');
+    }
+
+    public function test_routing_events_report_uses_reports_api(): void
+    {
+        Http::fake([
+            'https://reports.solidgate.com/routing_events' => Http::response(['report_id' => 'RPT_123'], 200),
+        ]);
+
+        $manager = new SolidGateManager($this->solidgateConfig());
+        $response = $manager->getRoutingEventsReport([
+            'date_from' => '2025-08-15 11:00:00',
+            'date_to' => '2025-08-18 11:00:00',
+        ]);
+
+        $this->assertTrue($response->isSuccessful());
+        Http::assertSent(fn ($request) => $request->url() === 'https://reports.solidgate.com/routing_events');
     }
 
     protected function solidgateConfig(): array

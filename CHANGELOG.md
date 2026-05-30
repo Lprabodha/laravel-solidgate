@@ -2,6 +2,18 @@
 
 All notable changes to this package will be documented in this file.
 
+## [1.0.2] - 2026-05-30
+
+### Fixed
+- `initializeAlternativePayment()` now correctly calls `gate.solidgate.com/api/v1/init-payment` instead of the pay API
+- Improved nested API error message parsing (`error.messages` field maps)
+
+### Added
+- `recurringAlternativePayment()` for gate `v1/recurring`
+- `getRoutingEventsReport()` and `downloadRoutingEvents()` reporting endpoints
+- `PaymentType` helper class with official CIT/MIT payment type constants
+- `ErrorMessageFormatter` and `SolidGateResponse::getErrorMessage()`
+
 ## [1.0.1] - 2026-05-30
 
 ### Fixed

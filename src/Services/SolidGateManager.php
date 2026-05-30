@@ -10,6 +10,7 @@ use Lahiru\LaravelSolidGate\Contracts\SolidGateClientInterface;
 use Lahiru\LaravelSolidGate\Exceptions\SolidGateApiException;
 use Lahiru\LaravelSolidGate\Exceptions\SolidGateConfigurationException;
 use Lahiru\LaravelSolidGate\Responses\SolidGateResponse;
+use Lahiru\LaravelSolidGate\Support\ErrorMessageFormatter;
 use Lahiru\LaravelSolidGate\Support\SignatureValidator;
 
 /**
@@ -177,15 +178,7 @@ class SolidGateManager implements SolidGateClientInterface
      */
     protected function extractErrorMessage(array $responseData): string
     {
-        if (isset($responseData['error']['messages']) && is_array($responseData['error']['messages'])) {
-            return implode(', ', $responseData['error']['messages']);
-        }
-
-        return $responseData['message']
-            ?? $responseData['error']['message']
-            ?? $responseData['error']['code']
-            ?? (is_string($responseData['error'] ?? null) ? $responseData['error'] : null)
-            ?? 'API request failed';
+        return ErrorMessageFormatter::fromResponse($responseData);
     }
 
     /**
@@ -739,13 +732,29 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Initialize alternative payment method.
      *
+     * @see https://api-docs.solidgate.com/#tag/Alternative-payment-methods/operation/init-apm-payment
+     *
      * @param  array  $attributes
      * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function initializeAlternativePayment(array $attributes): SolidGateResponse
     {
-        return $this->send('init-payment', $attributes);
+        return $this->gate('v1/init-payment', $attributes);
+    }
+
+    /**
+     * Process token-based recurring alternative payment.
+     *
+     * @see https://api-docs.solidgate.com/#tag/Alternative-payment-methods/operation/recurring-apm-payment
+     *
+     * @param  array  $attributes
+     * @return SolidGateResponse
+     * @throws SolidGateApiException
+     */
+    public function recurringAlternativePayment(array $attributes): SolidGateResponse
+    {
+        return $this->gate('v1/recurring', $attributes);
     }
 
     /**
@@ -1282,6 +1291,38 @@ class SolidGateManager implements SolidGateClientInterface
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
 
         return $this->sendToUrl($baseUrl, "financial_entries/report/{$reportId}/download", [], 'GET');
+    }
+
+    /**
+     * Get routing events report.
+     *
+     * @see https://api-docs.solidgate.com/#tag/Reporting/operation/create-routing-events-report
+     *
+     * @param  array  $filters
+     * @return SolidGateResponse
+     * @throws SolidGateApiException
+     */
+    public function getRoutingEventsReport(array $filters): SolidGateResponse
+    {
+        $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
+        return $this->sendToUrl($baseUrl, 'routing_events', $filters);
+    }
+
+    /**
+     * Download routing events report.
+     *
+     * @see https://api-docs.solidgate.com/#tag/Reporting/operation/download-routing-events-report
+     *
+     * @param  string  $reportId
+     * @return SolidGateResponse
+     * @throws SolidGateApiException
+     */
+    public function downloadRoutingEvents(string $reportId): SolidGateResponse
+    {
+        $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
+        return $this->sendToUrl($baseUrl, "routing_events/report/{$reportId}/download", [], 'GET');
     }
 
     // ========================================================================

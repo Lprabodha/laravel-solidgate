@@ -17,14 +17,14 @@
   ],
   "authors": [
     {
-      "name": "Lahiru",
-      "email": "lahiru@example.com"
+      "name": "Lahiru Prabodha",
+      "email": "lahiru@rightmo.lk"
     }
   ],
-  "homepage": "https://github.com/lahiru/laravel-solidgate",
+  "homepage": "https://github.com/Lprabodha/laravel-solidgate",
   "support": {
-    "issues": "https://github.com/lahiru/laravel-solidgate/issues",
-    "source": "https://github.com/lahiru/laravel-solidgate"
+    "issues": "https://github.com/Lprabodha/laravel-solidgate/issues",
+    "source": "https://github.com/Lprabodha/laravel-solidgate"
   },
   "require": {
     "php": "^8.2",
