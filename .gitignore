@@ -1,0 +1,50 @@
+# Dependencies
+/vendor/
+/node_modules/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# PHPUnit
+.phpunit.cache/
+.phpunit.result.cache
+/coverage/
+/clover.xml
+
+# IDE & editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# PHP & Composer
+composer.phar
+/auth.json
+.php-cs-fixer.cache
+.phpstan.cache
+/build/
+
+# Laravel / Testbench
+/storage/
+/bootstrap/cache/
+
+# Logs & temp
+*.log
+npm-debug.log*
+yarn-error.log
+.phpactor.json
