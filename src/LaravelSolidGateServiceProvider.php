@@ -19,7 +19,7 @@ class LaravelSolidGateServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->mergeConfigFrom(__DIR__ . '/../config/solidgate.php', 'solidgate');
+        $this->mergeConfigFrom(__DIR__.'/../config/solidgate.php', 'solidgate');
 
         $this->app->singleton(SolidGateClientInterface::class, function ($app) {
             return new SolidGateManager($app['config']->get('solidgate', []));
@@ -36,7 +36,7 @@ class LaravelSolidGateServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->publishes([
-            __DIR__ . '/../config/solidgate.php' => config_path('solidgate.php'),
+            __DIR__.'/../config/solidgate.php' => config_path('solidgate.php'),
         ], 'solidgate-config');
 
         // Register middleware alias
@@ -56,7 +56,13 @@ class LaravelSolidGateServiceProvider extends ServiceProvider
      */
     protected function loadRoutes(): void
     {
-        if (!$this->app->routesAreCached()) {
+        if (! $this->app->bound('router')) {
+            return;
+        }
+
+        $routesAreCached = method_exists($this->app, 'routesAreCached') && $this->app->routesAreCached();
+
+        if (! $routesAreCached) {
             $middleware = config('solidgate.webhook.middleware', 'solidgate.webhook');
 
             $this->app['router']->post(

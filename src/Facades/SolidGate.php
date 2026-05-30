@@ -5,6 +5,7 @@ namespace Lahiru\LaravelSolidGate\Facades;
 use Illuminate\Support\Facades\Facade;
 use Lahiru\LaravelSolidGate\Contracts\SolidGateClientInterface;
 use Lahiru\LaravelSolidGate\Responses\SolidGateResponse;
+use Lahiru\LaravelSolidGate\Services\SolidGateManager;
 
 /**
  * SolidGate Facade
@@ -88,16 +89,14 @@ use Lahiru\LaravelSolidGate\Responses\SolidGateResponse;
  * @method static SolidGateResponse downloadRoutingEvents(string $reportId)
  * @method static SolidGateResponse createFile(array $attributes)
  *
- * @see \Lahiru\LaravelSolidGate\Services\SolidGateManager
- * @see \Lahiru\LaravelSolidGate\Contracts\SolidGateClientInterface
+ * @see SolidGateManager
+ * @see SolidGateClientInterface
  * @see https://api-docs.solidgate.com/ Official SolidGate API Documentation
  */
 class SolidGate extends Facade
 {
     /**
      * Get the registered name of the component.
-     *
-     * @return string
      */
     protected static function getFacadeAccessor(): string
     {

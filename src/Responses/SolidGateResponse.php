@@ -13,8 +13,7 @@ readonly class SolidGateResponse
         public array $data,
         public int $statusCode,
         public array $headers = []
-    ) {
-    }
+    ) {}
 
     /**
      * Check if the response indicates success.
@@ -67,7 +66,7 @@ readonly class SolidGateResponse
         $value = $this->data;
 
         foreach ($keys as $k) {
-            if (!is_array($value) || !array_key_exists($k, $value)) {
+            if (! is_array($value) || ! array_key_exists($k, $value)) {
                 return $default;
             }
             $value = $value[$k];

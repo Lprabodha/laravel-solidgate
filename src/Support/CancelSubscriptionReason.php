@@ -220,9 +220,6 @@ class CancelSubscriptionReason
 
     /**
      * Check if a cancel reason code is valid.
-     *
-     * @param  string  $code
-     * @return bool
      */
     public static function isValid(string $code): bool
     {

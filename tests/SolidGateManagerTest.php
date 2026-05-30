@@ -2,6 +2,7 @@
 
 namespace Lahiru\LaravelSolidGate\Tests;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
 use Lahiru\LaravelSolidGate\Events\SolidGateWebhookReceived;
@@ -217,7 +218,7 @@ class SolidGateManagerTest extends TestCase
     {
         Event::fake([SolidGateWebhookReceived::class]);
 
-        $request = \Illuminate\Http\Request::create(
+        $request = Request::create(
             '/solidgate/webhook',
             'POST',
             [],
@@ -231,7 +232,7 @@ class SolidGateManagerTest extends TestCase
             json_encode(['order' => ['order_id' => 'order-123', 'status' => 'settle_ok']])
         );
 
-        $response = (new SolidGateWebhookController())->handle($request);
+        $response = (new SolidGateWebhookController)->handle($request);
 
         $this->assertSame(200, $response->getStatusCode());
         Event::assertDispatched(SolidGateWebhookReceived::class, function (SolidGateWebhookReceived $event) {

@@ -5,9 +5,9 @@ namespace Lahiru\LaravelSolidGate\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Symfony\Component\HttpFoundation\Response;
 use Lahiru\LaravelSolidGate\Exceptions\SolidGateSignatureException;
 use Lahiru\LaravelSolidGate\Support\SignatureValidator;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Middleware to verify SolidGate webhook signatures.
@@ -17,7 +17,8 @@ class VerifySolidGateSignature
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
+     *
      * @throws SolidGateSignatureException
      */
     public function handle(Request $request, Closure $next): Response
@@ -28,6 +29,7 @@ class VerifySolidGateSignature
 
         if (empty($publicKey) || empty($secretKey)) {
             Log::warning('SolidGate webhook verification skipped: missing credentials');
+
             return response()->json(['error' => 'Webhook verification not configured'], 500);
         }
 

@@ -24,14 +24,16 @@ use Lahiru\LaravelSolidGate\Support\SignatureValidator;
 class SolidGateManager implements SolidGateClientInterface
 {
     protected readonly string $publicKey;
+
     protected readonly string $secretKey;
+
     protected readonly array $config;
+
     protected readonly int $timeout;
 
     /**
      * Create a new SolidGate manager instance.
      *
-     * @param  array  $config
      * @throws SolidGateConfigurationException
      */
     public function __construct(array $config)
@@ -47,9 +49,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get configuration value with validation.
      *
-     * @param  string  $key
-     * @param  string  $envKey
-     * @return string
      * @throws SolidGateConfigurationException
      */
     protected function getConfigValue(string $key, string $envKey): string
@@ -88,8 +87,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create a charge transaction.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function charge(array $attributes): SolidGateResponse
@@ -100,8 +97,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Authorize a card without capturing funds.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function auth(array $attributes): SolidGateResponse
@@ -112,8 +107,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create a recurring transaction.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function recurring(array $attributes): SolidGateResponse
@@ -124,8 +117,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get transaction status.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function status(array $attributes): SolidGateResponse
@@ -136,8 +127,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Refund a transaction.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function refund(array $attributes): SolidGateResponse
@@ -148,8 +137,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Void a transaction.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function void(array $attributes): SolidGateResponse
@@ -160,8 +147,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Settle a transaction.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function settle(array $attributes): SolidGateResponse
@@ -172,10 +157,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Send a request to the SolidGate API.
      *
-     * @param  string  $endpoint
-     * @param  array  $attributes
-     * @param  string  $method
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function send(string $endpoint, array $attributes = [], string $method = 'POST'): SolidGateResponse
@@ -187,9 +168,6 @@ class SolidGateManager implements SolidGateClientInterface
 
     /**
      * Extract error message from API response.
-     *
-     * @param  array  $responseData
-     * @return string
      */
     protected function extractErrorMessage(array $responseData): string
     {
@@ -212,7 +190,6 @@ class SolidGateManager implements SolidGateClientInterface
      * @see https://docs.solidgate.com/payments/integrate/access-to-api/
      *
      * @param  string  $payload  Request body JSON string, or empty string for GET/DELETE without body
-     * @return string
      */
     public function generateSignature(string $payload): string
     {
@@ -222,8 +199,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Encode request attributes to JSON matching the official Solidgate PHP SDK.
      *
-     * @param  array  $attributes
-     * @return string
      * @throws SolidGateApiException
      */
     protected function encodePayload(array $attributes): string
@@ -239,9 +214,6 @@ class SolidGateManager implements SolidGateClientInterface
 
     /**
      * Merge default payment fields required by the SolidGate API.
-     *
-     * @param  array  $attributes
-     * @return array
      */
     protected function mergePaymentDefaults(array $attributes): array
     {
@@ -313,7 +285,7 @@ class SolidGateManager implements SolidGateClientInterface
         array $attributes = [],
         string $method = 'POST'
     ): SolidGateResponse {
-        $url = rtrim($baseUrl, '/') . '/' . ltrim($endpoint, '/');
+        $url = rtrim($baseUrl, '/').'/'.ltrim($endpoint, '/');
         $httpMethod = strtoupper($method);
         [$body, $signaturePayload] = $this->resolveRequestPayload($method, $attributes);
 
@@ -368,16 +340,20 @@ class SolidGateManager implements SolidGateClientInterface
 
             return new SolidGateResponse($responseData, $statusCode, $response->headers());
         } catch (RequestException $e) {
-            $responseData = $e->response?->json() ?? ['error' => $e->getMessage()];
+            $failedResponse = $e->response;
+            $responseData = $failedResponse !== null
+                ? ($failedResponse->json() ?? ['error' => $e->getMessage()])
+                : ['error' => $e->getMessage()];
+
             throw new SolidGateApiException(
-                'SolidGate request failed: ' . $e->getMessage(),
+                'SolidGate request failed: '.$e->getMessage(),
                 $responseData,
-                $e->response?->status() ?? 0,
+                $failedResponse !== null ? $failedResponse->status() : 0,
                 $e
             );
         } catch (ConnectionException $e) {
             throw new SolidGateApiException(
-                'SolidGate connection failed: ' . $e->getMessage(),
+                'SolidGate connection failed: '.$e->getMessage(),
                 ['error' => $e->getMessage()],
                 0,
                 $e
@@ -388,25 +364,18 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Send request to subscriptions API.
      *
-     * @param  string  $endpoint
-     * @param  array  $attributes
-     * @param  string  $method
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function subscriptions(string $endpoint, array $attributes = [], string $method = 'POST'): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['subscriptions_url'] ?? 'https://subscriptions.solidgate.com/api/v1/', '/');
+
         return $this->sendToUrl($baseUrl, $endpoint, $attributes, $method);
     }
 
     /**
      * Send request to gate API (alternative payments).
      *
-     * @param  string  $endpoint
-     * @param  array  $attributes
-     * @param  string  $method
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function gate(string $endpoint, array $attributes = [], string $method = 'POST'): SolidGateResponse
@@ -424,11 +393,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Send request to a specific URL.
      *
-     * @param  string  $baseUrl
-     * @param  string  $endpoint
-     * @param  array  $attributes
-     * @param  string  $method
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     protected function sendToUrl(string $baseUrl, string $endpoint, array $attributes = [], string $method = 'POST'): SolidGateResponse
@@ -439,10 +403,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Cancel a subscription.
      *
-     * @param  string  $subscriptionId
-     * @param  string  $cancelCode
-     * @param  bool  $force
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function cancelSubscription(string $subscriptionId, string $cancelCode, bool $force = false): SolidGateResponse
@@ -457,8 +417,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Retrieve subscription status.
      *
-     * @param  string  $subscriptionId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function retrieveSubscription(string $subscriptionId): SolidGateResponse
@@ -471,9 +429,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Switch subscription product.
      *
-     * @param  string  $subscriptionId
-     * @param  string  $productId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function switchSubscriptionProduct(string $subscriptionId, string $productId): SolidGateResponse
@@ -487,23 +442,18 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Update subscription.
      *
-     * @param  string  $subscriptionId
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function updateSubscription(string $subscriptionId, array $attributes = []): SolidGateResponse
     {
         $payload = array_merge(['id' => $subscriptionId], $attributes);
+
         return $this->subscriptions('subscription/update', $payload);
     }
 
     /**
      * Restore subscription.
      *
-     * @param  string  $subscriptionId
-     * @param  string|null  $expireDate
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function restoreSubscription(string $subscriptionId, ?string $expireDate = null): SolidGateResponse
@@ -512,14 +462,13 @@ class SolidGateManager implements SolidGateClientInterface
         if ($expireDate) {
             $payload['expired_at'] = $expireDate;
         }
+
         return $this->subscriptions('subscription/restore', $payload);
     }
 
     /**
      * Get subscription list by customer.
      *
-     * @param  string  $customerId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getSubscriptionList(string $customerId): SolidGateResponse
@@ -532,9 +481,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Update payment method token for subscription.
      *
-     * @param  string  $subscriptionId
-     * @param  string  $token
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function updatePaymentMethodToken(string $subscriptionId, string $token): SolidGateResponse
@@ -548,10 +494,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create subscription pause.
      *
-     * @param  string  $subscriptionId
-     * @param  string  $stopDate
-     * @param  string|null  $startDate
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createSubscriptionPause(string $subscriptionId, string $stopDate, ?string $startDate = null): SolidGateResponse
@@ -576,8 +518,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get order status from pay API.
      *
-     * @param  string  $orderId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getOrderStatus(string $orderId): SolidGateResponse
@@ -588,8 +528,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get order status from gate API.
      *
-     * @param  string  $orderId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getAlternativePaymentOrderStatus(string $orderId): SolidGateResponse
@@ -600,8 +538,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Void a transaction by order ID.
      *
-     * @param  string  $orderId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function voidTransaction(string $orderId): SolidGateResponse
@@ -612,9 +548,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Settle a transaction by order ID.
      *
-     * @param  string  $orderId
-     * @param  int  $amount
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function settleTransaction(string $orderId, int $amount): SolidGateResponse
@@ -628,11 +561,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Process full refund.
      *
-     * @param  string  $orderId
-     * @param  int  $amount
-     * @param  string  $method
-     * @param  string|null  $refundReasonCode
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function processFullRefund(string $orderId, int $amount, string $method = 'card', ?string $refundReasonCode = null): SolidGateResponse
@@ -660,11 +588,6 @@ class SolidGateManager implements SolidGateClientInterface
      *
      * SolidGate uses the same refund endpoint; partial refunds are determined by amount.
      *
-     * @param  string  $orderId
-     * @param  int  $amount
-     * @param  string  $method
-     * @param  string|null  $refundReasonCode
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function processPartialRefund(string $orderId, int $amount, string $method = 'card', ?string $refundReasonCode = null): SolidGateResponse
@@ -675,8 +598,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create a product.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createProduct(array $attributes): SolidGateResponse
@@ -687,9 +608,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create product price.
      *
-     * @param  string  $productId
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createProductPrice(string $productId, array $attributes): SolidGateResponse
@@ -700,10 +618,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get product prices.
      *
-     * @param  string  $productId
-     * @param  int  $limit
-     * @param  int  $offset
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getProductPrices(string $productId, int $limit = 80, int $offset = 0): SolidGateResponse
@@ -723,10 +637,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Update product price.
      *
-     * @param  string  $productId
-     * @param  string  $priceId
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function updateProductPrice(string $productId, string $priceId, array $attributes): SolidGateResponse
@@ -741,8 +651,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Process Google Pay payment.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function chargeWithGooglePay(array $attributes): SolidGateResponse
@@ -753,8 +661,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Process Apple Pay payment.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function chargeWithApplePay(array $attributes): SolidGateResponse
@@ -765,8 +671,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create incremental authorization.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createIncrementalAuth(array $attributes): SolidGateResponse
@@ -777,8 +681,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Resign a transaction.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function resignTransaction(array $attributes): SolidGateResponse
@@ -789,8 +691,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get ARN codes for a transaction.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getArnCodes(array $attributes): SolidGateResponse
@@ -807,8 +707,6 @@ class SolidGateManager implements SolidGateClientInterface
      *
      * @see https://api-docs.solidgate.com/#tag/Alternative-payment-methods/operation/init-apm-payment
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function initializeAlternativePayment(array $attributes): SolidGateResponse
@@ -821,8 +719,6 @@ class SolidGateManager implements SolidGateClientInterface
      *
      * @see https://api-docs.solidgate.com/#tag/Alternative-payment-methods/operation/recurring-apm-payment
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function recurringAlternativePayment(array $attributes): SolidGateResponse
@@ -833,8 +729,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Revoke recurring token for alternative payment.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function revokeRecurringToken(array $attributes): SolidGateResponse
@@ -849,8 +743,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get product list.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getProductList(array $filters = []): SolidGateResponse
@@ -861,8 +753,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get product by ID.
      *
-     * @param  string  $productId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getProduct(string $productId): SolidGateResponse
@@ -873,9 +763,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Update product.
      *
-     * @param  string  $productId
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function updateProduct(string $productId, array $attributes): SolidGateResponse
@@ -886,8 +773,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Archive product.
      *
-     * @param  string  $productId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function archiveProduct(string $productId): SolidGateResponse
@@ -898,8 +783,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Retrieve product prices.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function retrieveProductPrices(array $attributes): SolidGateResponse
@@ -910,8 +793,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Calculate product price.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function calculateProductPrice(array $attributes): SolidGateResponse
@@ -926,8 +807,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create transactional tax.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createTransactionalTax(array $attributes): SolidGateResponse
@@ -938,8 +817,7 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Download transactional tax.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
+     *
      * @throws SolidGateApiException
      */
     public function downloadTransactionalTax(string $reportId): SolidGateResponse
@@ -950,8 +828,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create summary tax.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createSummaryTax(array $attributes): SolidGateResponse
@@ -962,8 +838,7 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Download summary tax.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
+     *
      * @throws SolidGateApiException
      */
     public function downloadSummaryTax(string $reportId): SolidGateResponse
@@ -978,9 +853,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Update subscription pause.
      *
-     * @param  string  $subscriptionId
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function updateSubscriptionPause(string $subscriptionId, array $attributes): SolidGateResponse
@@ -991,8 +863,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Remove subscription pause.
      *
-     * @param  string  $subscriptionId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function removeSubscriptionPause(string $subscriptionId): SolidGateResponse
@@ -1003,10 +873,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Cancel subscriptions by customer.
      *
-     * @param  string  $customerId
-     * @param  string  $cancelCode
-     * @param  bool  $force
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function cancelSubscriptionsByCustomer(string $customerId, string $cancelCode, bool $force = false): SolidGateResponse
@@ -1021,9 +887,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * List invoices by subscription.
      *
-     * @param  string  $subscriptionId
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function listInvoicesBySubscription(string $subscriptionId, array $filters = []): SolidGateResponse
@@ -1036,9 +899,6 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * List orders by invoice ID.
      *
-     * @param  string  $invoiceId
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function listOrdersByInvoice(string $invoiceId, array $filters = []): SolidGateResponse
@@ -1055,65 +915,60 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create fraud prevention list items.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createFraudPreventionListItems(array $attributes): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'fraud-prevention-list-items/create', $attributes);
     }
 
     /**
      * List fraud prevention list items.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function listFraudPreventionListItems(array $filters = []): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'fraud-prevention-list-items/list', $filters);
     }
 
     /**
      * Delete fraud prevention list item.
      *
-     * @param  string  $itemId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function deleteFraudPreventionListItem(string $itemId): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, "fraud-prevention-list-items/{$itemId}", [], 'DELETE');
     }
 
     /**
      * Create dispute representment.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createDisputeRepresentment(array $attributes): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'dispute-representments/create', $attributes);
     }
 
     /**
      * Enrich dispute representment.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function enrichDisputeRepresentment(array $attributes): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'dispute-representments/enrich', $attributes);
     }
 
@@ -1124,52 +979,48 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create payment page.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createPaymentPage(array $attributes): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, 'init', $attributes);
     }
 
     /**
      * Deactivate payment page.
      *
-     * @param  string  $pageId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function deactivatePaymentPage(string $pageId): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, 'deactivate', ['id' => $pageId]);
     }
 
     /**
      * Create payment link.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createPaymentLink(array $attributes): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, 'link/init', $attributes);
     }
 
     /**
      * Deactivate payment link.
      *
-     * @param  string  $linkId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function deactivatePaymentLink(string $linkId): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, 'link/deactivate', ['id' => $linkId]);
     }
 
@@ -1180,53 +1031,48 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create webhook endpoint.
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createWebhookEndpoint(array $attributes): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, 'webhooks/endpoints', $attributes);
     }
 
     /**
      * List webhook endpoints.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function listWebhookEndpoints(array $filters = []): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, 'webhooks/endpoints', $filters, 'GET');
     }
 
     /**
      * Update webhook endpoint.
      *
-     * @param  string  $webhookId
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function updateWebhookEndpoint(string $webhookId, array $attributes): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, "webhooks/endpoints/{$webhookId}", $attributes, 'PATCH');
     }
 
     /**
      * Delete webhook endpoint.
      *
-     * @param  string  $webhookId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function deleteWebhookEndpoint(string $webhookId): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, "webhooks/endpoints/{$webhookId}", [], 'DELETE');
     }
 
@@ -1237,86 +1083,79 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get card orders report.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getCardOrdersReport(array $filters): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'card-orders', $filters);
     }
 
     /**
      * Get APM orders report.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getApmOrdersReport(array $filters): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'apm-orders', $filters);
     }
 
     /**
      * Get subscriptions report.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getSubscriptionsReport(array $filters): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'subscriptions', $filters);
     }
 
     /**
      * Get chargebacks report.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getChargebacksReport(array $filters): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'card-orders/chargebacks', $filters);
     }
 
     /**
      * Get PayPal disputes report.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getPaypalDisputesReport(array $filters): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'apm-orders/paypal-disputes', $filters);
     }
 
     /**
      * Get prevention alerts report.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getPreventionAlertsReport(array $filters): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'prevention_alerts', $filters);
     }
 
     /**
      * Download prevention alerts.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
+     *
      * @throws SolidGateApiException
      */
     public function downloadPreventionAlerts(string $reportId): SolidGateResponse
@@ -1329,34 +1168,31 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Get card fraud alerts report.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getCardFraudAlertsReport(array $filters): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'card-orders/fraud-alerts', $filters);
     }
 
     /**
      * Get financial entries by date range.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getFinancialEntriesByDateRange(array $filters): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['reports_url'] ?? 'https://reports.solidgate.com/', '/');
+
         return $this->sendToUrl($baseUrl, 'financial_entries', $filters);
     }
 
     /**
      * Download financial entries.
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
+     *
      * @throws SolidGateApiException
      */
     public function downloadFinancialEntries(string $reportId): SolidGateResponse
@@ -1371,8 +1207,6 @@ class SolidGateManager implements SolidGateClientInterface
      *
      * @see https://api-docs.solidgate.com/#tag/Reporting/operation/create-routing-events-report
      *
-     * @param  array  $filters
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function getRoutingEventsReport(array $filters): SolidGateResponse
@@ -1387,8 +1221,6 @@ class SolidGateManager implements SolidGateClientInterface
      *
      * @see https://api-docs.solidgate.com/#tag/Reporting/operation/download-routing-events-report
      *
-     * @param  string  $reportId
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function downloadRoutingEvents(string $reportId): SolidGateResponse
@@ -1405,13 +1237,12 @@ class SolidGateManager implements SolidGateClientInterface
     /**
      * Create file (upload file).
      *
-     * @param  array  $attributes
-     * @return SolidGateResponse
      * @throws SolidGateApiException
      */
     public function createFile(array $attributes): SolidGateResponse
     {
         $baseUrl = rtrim($this->config['api']['base_url'] ?? '', '/');
+
         return $this->sendToUrl($baseUrl, 'file/get-upload-url', $attributes);
     }
 }

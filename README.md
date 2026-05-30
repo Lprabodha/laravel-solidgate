@@ -635,10 +635,20 @@ cp .env.example .env   # never commit real keys
 ```
 
 ```bash
-composer test      # run PHPUnit
-composer format    # run Laravel Pint
-composer analyse   # run PHPStan
+composer test           # PHPUnit
+composer analyse        # PHPStan static analysis
+composer format         # fix code style (Laravel Pint)
+composer format:check   # verify code style without fixing
 ```
+
+CI runs on every push and pull request via [GitHub Actions](.github/workflows/ci.yml):
+
+| Job | Checks |
+|-----|--------|
+| **tests** | PHPUnit on PHP 8.2 and 8.3 |
+| **static-analysis** | PHPStan level 5 |
+| **code-style** | Laravel Pint |
+| **security** | Composer audit (advisory) |
 
 ---
 

@@ -15,9 +15,6 @@ class SolidGateWebhookReceived
 
     /**
      * Create a new event instance.
-     *
-     * @param  string  $eventType
-     * @param  array  $payload
      */
     public function __construct(
         public readonly string $eventType,

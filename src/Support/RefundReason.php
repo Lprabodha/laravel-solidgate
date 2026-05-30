@@ -246,9 +246,6 @@ class RefundReason
 
     /**
      * Check if a refund reason code is valid.
-     *
-     * @param  string  $code
-     * @return bool
      */
     public static function isValid(string $code): bool
     {
@@ -257,9 +254,6 @@ class RefundReason
 
     /**
      * Get description for a refund reason code.
-     *
-     * @param  string  $code
-     * @return string|null
      */
     public static function getDescription(string $code): ?string
     {

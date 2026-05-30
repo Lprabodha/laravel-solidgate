@@ -34,9 +34,6 @@ class SolidGateConstants
 
     /**
      * Check if a currency is zero decimal.
-     *
-     * @param  string  $currency
-     * @return bool
      */
     public static function isZeroDecimalCurrency(string $currency): bool
     {
@@ -45,10 +42,6 @@ class SolidGateConstants
 
     /**
      * Convert amount to SolidGate format (cents for non-zero decimal currencies).
-     *
-     * @param  float  $amount
-     * @param  string  $currency
-     * @return int
      */
     public static function formatAmount(float $amount, string $currency): int
     {
@@ -61,10 +54,6 @@ class SolidGateConstants
 
     /**
      * Convert amount from SolidGate format (cents to dollars for non-zero decimal currencies).
-     *
-     * @param  int  $amount
-     * @param  string  $currency
-     * @return float
      */
     public static function parseAmount(int $amount, string $currency): float
     {
