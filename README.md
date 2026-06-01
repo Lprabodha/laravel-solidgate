@@ -1,6 +1,6 @@
 # Laravel SolidGate
 
-[![Latest Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](https://packagist.org/packages/lahiru/laravel-solidgate)
+[![Latest Version](https://img.shields.io/badge/version-1.0.7-blue.svg)](https://packagist.org/packages/lahiru/laravel-solidgate)
 [![PHP Version](https://img.shields.io/badge/php-8.2%2B-blue.svg)](https://php.net)
 [![Laravel Version](https://img.shields.io/badge/laravel-10.x%20%7C%2011.x%20%7C%2012.x%20%7C%2013.x-red.svg)](https://laravel.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
